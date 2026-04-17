@@ -39,7 +39,62 @@ function estimateBarcode(){const raw=document.getElementById('barcodeCode').valu
 function readPreparedFile(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{preparedPhotoData=reader.result;document.getElementById('preparedPreview').src=preparedPhotoData;document.getElementById('preparedPreview').style.display='block';document.getElementById('preparedFallback').style.display='none';setPreparedStatus('Photo ready. Tap Recognize Food.')};reader.onerror=()=>setPreparedStatus('Could not read photo.');reader.readAsDataURL(file)}
 function takePreparedPhoto(){const input=document.createElement('input');input.type='file';input.accept='image/*';input.setAttribute('capture','environment');input.onchange=()=>{const file=input.files&&input.files[0];if(!file){setPreparedStatus('No photo selected.');return;}readPreparedFile(file)};input.click()}
 function uploadPreparedPhoto(){const input=document.createElement('input');input.type='file';input.accept='image/*';input.onchange=()=>{const file=input.files&&input.files[0];if(!file){setPreparedStatus('No photo selected.');return;}readPreparedFile(file)};input.click()}
-async function recognizePreparedFood(){if(!preparedPhotoData){setPreparedStatus('Take or upload a photo first.');return;}setPreparedStatus('Recognizing food...');try{const resp=await fetch(FOOD_VISION_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:preparedPhotoData})});const data=await resp.json();if(!resp.ok)throw new Error(data.error||'Recognition failed');const sodium=Math.round(Number(data.sodium||0));const potassium=Math.round(Number(data.potassium||0));const phosphorus=Math.round(Number(data.phosphorus||0));const level=scoreFromLabel(sodium,potassium,phosphorus);currentResult={title:String(data.title||'Recognized meal'),subtype:'Photo-recognized prepared food',source:String(data.source||'Food recognition function'),sodium,potassium,phosphorus,level,confidence:String(data.confidence||'Moderate'),notes:String(data.notes||'Recognized from food photo.'),why:buildWhy(sodium,potassium,phosphorus)};lastScreen='prepared';setPreparedStatus('Food recognized. Review result.');showResult()}catch(e){setPreparedStatus('Recognition failed. Check Netlify function and API key, or use structured meal entry.')}}
+async function recognizePreparedFood(){
+  if(!preparedPhotoData){
+    setPreparedStatus('Take or upload a photo first.');
+    return;
+  }
+
+  setPreparedStatus('Recognizing food...');
+
+  try{
+    const resp = await fetch(FOOD_VISION_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: preparedPhotoData })
+    });
+
+    const rawText = await resp.text();
+    console.log("food-recognition raw response:", rawText);
+
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch (e) {
+      throw new Error("Invalid JSON from function: " + rawText);
+    }
+
+    if(!resp.ok){
+      throw new Error(data.error || 'Recognition failed');
+    }
+
+    const sodium = Math.round(Number(data.sodium || 0));
+    const potassium = Math.round(Number(data.potassium || 0));
+    const phosphorus = Math.round(Number(data.phosphorus || 0));
+    const level = scoreFromLabel(sodium, potassium, phosphorus);
+
+    currentResult = {
+      title: String(data.title || 'Recognized meal'),
+      subtype: 'Photo-recognized prepared food',
+      source: String(data.source || 'Food recognition function'),
+      sodium,
+      potassium,
+      phosphorus,
+      level,
+      confidence: String(data.confidence || 'Moderate'),
+      notes: String(data.notes || 'Recognized from food photo.'),
+      why: buildWhy(sodium, potassium, phosphorus)
+    };
+
+    lastScreen = 'prepared';
+    setPreparedStatus('Food recognized. Review result.');
+    showResult();
+
+  } catch(e){
+    console.error(e);
+    setPreparedStatus('Recognition failed: ' + e.message);
+  }
+}
 function estimatePrepared(){const meal=document.getElementById('mealType').value;const protein=document.getElementById('proteinType').value;const cheese=document.getElementById('extraCheese').checked;const cream=document.getElementById('extraCream').checked;const gravy=document.getElementById('extraGravy').checked;const processed=document.getElementById('extraProcessed').checked;const salt=document.getElementById('extraSalt').checked;let sodium=500,potassium=150,phosphorus=110;if(meal==='Sandwich'){sodium=620;potassium=140;phosphorus=120}else if(meal==='Soup'){sodium=950;potassium=170;phosphorus=120}else if(meal==='Dinner Plate'){sodium=700;potassium=180;phosphorus=130}else if(meal==='Salad'){sodium=280;potassium=220;phosphorus=80}else if(meal==='Casserole'){sodium=820;potassium=180;phosphorus=160}else if(meal==='Rice Bowl'){sodium=650;potassium=170;phosphorus=130}else if(meal==='Stir Fry'){sodium=700;potassium=210;phosphorus=125}else if(meal==='Burrito Bowl'){sodium=760;potassium=240;phosphorus=145}else if(meal==='Breakfast Plate'){sodium=720;potassium=160;phosphorus=135}if(protein==='Chicken'){sodium+=20;phosphorus+=10}else if(protein==='Beef'){sodium+=40;potassium+=20;phosphorus+=15}else if(protein==='Ham'){sodium+=220;phosphorus+=25}else if(protein==='Turkey'){sodium+=80;phosphorus+=12}else if(protein==='Fish'){potassium+=25;phosphorus+=18}else if(protein==='Eggs'){phosphorus+=20}else if(protein==='None'){sodium-=40;phosphorus-=10}if(cheese){sodium+=180;phosphorus+=45}if(cream){sodium+=150;phosphorus+=35}if(gravy){sodium+=190}if(processed){sodium+=250;phosphorus+=30}if(salt){sodium+=220}if(selectedPortion==='Small'){sodium=Math.round(sodium*0.8);potassium=Math.round(potassium*0.8);phosphorus=Math.round(phosphorus*0.8)}else if(selectedPortion==='Large'){sodium=Math.round(sodium*1.2);potassium=Math.round(potassium*1.2);phosphorus=Math.round(phosphorus*1.2)}let level='limit';if(sodium>=850||phosphorus>=150)level='avoid';else if(sodium<=350&&phosphorus<=100)level='better';const extras=[];if(cheese)extras.push('cheese');if(cream)extras.push('cream sauce');if(gravy)extras.push('gravy');if(processed)extras.push('processed meat');if(salt)extras.push('salt-heavy seasoning');const title=extras.length?`${meal} with ${protein} + ${extras.join(', ')}`:`${meal} with ${protein}`;currentResult={title,subtype:'Structured prepared food estimate',source:'Structured meal entry',sodium,potassium,phosphorus,level,confidence:'Moderate',notes:'Estimated using meal type, protein, portion, and extras.',why:buildWhy(sodium,potassium,phosphorus)};lastScreen='prepared';showResult()}
 function showResult(){document.getElementById('resultTitle').textContent=currentResult.title;document.getElementById('resultSubtype').textContent=currentResult.subtype;document.getElementById('resultSource').textContent='Source: '+currentResult.source;document.getElementById('resultConfidence').textContent='Confidence: '+currentResult.confidence;document.getElementById('resultSodium').textContent=currentResult.sodium+' mg';document.getElementById('resultPotassium').textContent=currentResult.potassium+' mg';document.getElementById('resultPhosphorus').textContent=currentResult.phosphorus+' mg';document.getElementById('resultNotes').textContent=currentResult.notes;const pill=document.getElementById('resultLevelPill');pill.textContent=recommendationLabel(currentResult.level);pill.className='pill '+currentResult.level;document.getElementById('resultWhy').innerHTML=currentResult.why.map(x=>`<div class="list-item">${x}</div>`).join('');openScreen('result')}
 function addCurrentResultToToday(){if(!currentResult)return;const items=loadEntries();items.push({...currentResult,timestamp:new Date().toISOString()});saveEntries(items);alert('Added to Today');openScreen('today')}
