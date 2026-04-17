@@ -69,7 +69,7 @@ async function recognizePreparedFood(){
     }
 
     if(!resp.ok){
-      throw new Error(data.error || 'Recognition failed');
+      throw new Error(data.error || rawText || 'Recognition failed');
     }
 
     const sodium = Math.round(Number(data.sodium || 0));
