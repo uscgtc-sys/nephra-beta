@@ -55,7 +55,21 @@ export default async (req, context) => {
 
     const data = await resp.json();
     const raw = extractText(data);
-    const parsed = parseJson(raw);
+    let parsed;
+
+try {
+  parsed = parseJson(raw);
+} catch (e) {
+  parsed = {
+    title: raw?.slice(0, 50) || "Recognized meal",
+    sodium: 500,
+    potassium: 500,
+    phosphorus: 200,
+    confidence: "Low",
+    notes: "AI response was not structured. Using fallback.",
+    source: "AI fallback"
+  };
+}
 
     return json(200, {
       title: String(parsed.title || "Recognized meal"),
