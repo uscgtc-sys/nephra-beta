@@ -1,0 +1,1 @@
+Upload this folder to a NEW Netlify site or replace your existing one. Then add OPENAI_API_KEY in Netlify environment variables.
