@@ -1,9 +1,10 @@
-export default async (req, context) => {
-  if (req.method === "OPTIONS") {
+
+exports.handler = async function(event, context) {
+  if (event.httpMethod === "OPTIONS") {
     return json(200, { ok: true });
   }
 
-  if (req.method !== "POST") {
+  if (event.httpMethod !== "POST") {
     return json(405, { error: "Method not allowed" });
   }
 
@@ -13,7 +14,7 @@ export default async (req, context) => {
       return json(500, { error: "Missing OPENAI_API_KEY in Netlify environment variables" });
     }
 
-    const body = await req.json();
+    const body = JSON.parse(event.body || "{}");
     const image = body.image;
 
     if (!image || typeof image !== "string") {
@@ -30,7 +31,7 @@ export default async (req, context) => {
     const resp = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
@@ -49,27 +50,27 @@ export default async (req, context) => {
     });
 
     if (!resp.ok) {
-  const text = await resp.text();
-  return json(502, { error: 'OpenAI request failed: ' + text });
-}
+      const text = await resp.text();
+      return json(502, { error: "OpenAI request failed: " + text });
+    }
 
     const data = await resp.json();
     const raw = extractText(data);
-    let parsed;
 
-try {
-  parsed = parseJson(raw);
-} catch (e) {
-  parsed = {
-    title: raw?.slice(0, 50) || "Recognized meal",
-    sodium: 500,
-    potassium: 500,
-    phosphorus: 200,
-    confidence: "Low",
-    notes: "AI response was not structured. Using fallback.",
-    source: "AI fallback"
-  };
-}
+    let parsed;
+    try {
+      parsed = parseJson(raw);
+    } catch (e) {
+      parsed = {
+        title: raw?.slice(0, 50) || "Recognized meal",
+        sodium: 500,
+        potassium: 300,
+        phosphorus: 150,
+        confidence: "Low",
+        notes: "AI response was not structured. Using fallback.",
+        source: "AI fallback"
+      };
+    }
 
     return json(200, {
       title: String(parsed.title || "Recognized meal"),
@@ -80,11 +81,13 @@ try {
       notes: String(parsed.notes || "Recognized from food photo. Review before relying on it."),
       source: String(parsed.source || "Prepared food recognition")
     });
+
   } catch (error) {
-  return json(500, {
-    error: 'Function failed: ' + (error instanceof Error ? error.message : String(error))
-  });
-}
+    return json(500, {
+      error: "Function failed: " + (error instanceof Error ? error.message : String(error))
+    });
+  }
+};
 
 function extractText(responseJson) {
   if (typeof responseJson?.output_text === "string" && responseJson.output_text.trim()) {
@@ -101,7 +104,7 @@ function extractText(responseJson) {
       if (typeof c?.text === "string") parts.push(c.text);
     }
   }
-  return parts.join("\\n").trim();
+  return parts.join("\n").trim();
 }
 
 function parseJson(text) {
@@ -109,9 +112,9 @@ function parseJson(text) {
     return JSON.parse(text);
   } catch {
     const cleaned = String(text || "")
-      .replace(/^```json\\s*/i, "")
-      .replace(/^```\\s*/i, "")
-      .replace(/```\\s*$/i, "")
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/```\s*$/i, "")
       .trim();
     return JSON.parse(cleaned);
   }
@@ -124,13 +127,14 @@ function safeNumber(value) {
 }
 
 function json(statusCode, payload) {
-  return new Response(JSON.stringify(payload), {
-    status: statusCode,
+  return {
+    statusCode,
     headers: {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "Content-Type",
       "Access-Control-Allow-Methods": "POST, OPTIONS"
-    }
-  });
+    },
+    body: JSON.stringify(payload)
+  };
 }
