@@ -49,9 +49,9 @@ export default async (req, context) => {
     });
 
     if (!resp.ok) {
-      const text = await resp.text();
-      return json(502, { error: "OpenAI request failed", details: text });
-    }
+  const text = await resp.text();
+  return json(502, { error: 'OpenAI request failed: ' + text });
+}
 
     const data = await resp.json();
     const raw = extractText(data);
@@ -81,12 +81,10 @@ try {
       source: String(parsed.source || "Prepared food recognition")
     });
   } catch (error) {
-    return json(500, {
-      error: "Function failed",
-      details: error instanceof Error ? error.message : String(error)
-    });
-  }
-};
+  return json(500, {
+    error: 'Function failed: ' + (error instanceof Error ? error.message : String(error))
+  });
+}
 
 function extractText(responseJson) {
   if (typeof responseJson?.output_text === "string" && responseJson.output_text.trim()) {
