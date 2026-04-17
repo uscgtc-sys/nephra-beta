@@ -45,6 +45,12 @@ async function recognizePreparedFood(){
     return;
   }
 
+async function recognizePreparedFood(){
+  if(!preparedPhotoData){
+    setPreparedStatus('Take or upload a photo first.');
+    return;
+  }
+
   setPreparedStatus('Recognizing food...');
 
   try{
