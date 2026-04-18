@@ -20,7 +20,9 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eff2f5;color:#1
 </div>
 
 <div class="nav"><div class="nav-inner"><button id="nav-home" class="active" onclick="openScreen('home')">Home</button><button id="nav-today" onclick="openScreen('today')">Today</button><button id="nav-reports" onclick="openScreen('reports')">Reports</button></div></div>
-async function lookupBarcode(){
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+ async function lookupBarcode(){
   const code=document.getElementById('barcodeCode').value.trim();
   if(!code) return;
 
@@ -28,7 +30,6 @@ async function lookupBarcode(){
 
   try{
     const url=`https://world.openfoodfacts.org/api/v2/product/${code}.json`;
-
     const resp=await fetch(url);
     const data=await resp.json();
 
@@ -40,13 +41,11 @@ async function lookupBarcode(){
     const product=data.product || {};
     const nutriments=product.nutriments || {};
 
-    // Product name
     document.getElementById('barcodeName').value =
       product.product_name || 'Unknown product';
 
-    // Sodium (convert g → mg if needed)
     let sodium = nutriments.sodium_100g;
-    if(sodium){
+    if(sodium!==undefined && sodium!==null && sodium!==''){
       sodium = Math.round(Number(sodium) * 1000);
     } else {
       sodium = 0;
@@ -60,8 +59,7 @@ async function lookupBarcode(){
     console.error(e);
     setBarcodeStatus('Lookup failed.');
   }
-}
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+} 
 <script>
 const STORAGE_KEY='nephra_prepared_food_photo_log', FOOD_VISION_ENDPOINT='/.netlify/functions/food-recognition';
 let currentResult=null,lastScreen='home',selectedPortion='Medium',scannerStream=null,scannerTimer=null,scannerRunning=false,preparedPhotoData=null;
