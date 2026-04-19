@@ -23,23 +23,41 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eff2f5;color:#1
 
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
-async function lookupBarcode(){
+ 
+ async function lookupBarcode(){
   const code=document.getElementById('barcodeCode').value.trim();
   if(!code) return;
 
   setBarcodeStatus('Looking up product...');
 
   try{
-const url=`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,nutriments`;    
-    const resp=await fetch(url);
-    const data=await resp.json();
+    // 🔹 Try direct lookup
+    let url=`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,nutriments`;
+    let resp=await fetch(url);
+    let data=await resp.json();
 
-    if(data.status!==1){
+    let product=null;
+
+    if(data.status===1){
+      product=data.product;
+    } else {
+      // 🔥 FALLBACK SEARCH
+      setBarcodeStatus('Searching database...');
+      const searchUrl=`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${code}&search_simple=1&action=process&json=1`;
+
+      const searchResp=await fetch(searchUrl);
+      const searchData=await searchResp.json();
+
+      if(searchData.products && searchData.products.length){
+        product=searchData.products[0];
+      }
+    }
+
+    if(!product){
       setBarcodeStatus('Product not found. Enter manually.');
       return;
     }
 
-    const product=data.product || {};
     const nutriments=product.nutriments || {};
 
     document.getElementById('barcodeName').value =
@@ -60,8 +78,7 @@ const url=`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(c
     console.error(e);
     setBarcodeStatus('Lookup failed.');
   }
-} 
- 
+}
 const STORAGE_KEY='nephra_prepared_food_photo_log', FOOD_VISION_ENDPOINT='/.netlify/functions/food-recognition';
 let currentResult=null,lastScreen='home',selectedPortion='Medium',scannerStream=null,scannerTimer=null,scannerRunning=false,preparedPhotoData=null;
 function loadEntries(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch{return[]}} function saveEntries(items){localStorage.setItem(STORAGE_KEY,JSON.stringify(items))}
