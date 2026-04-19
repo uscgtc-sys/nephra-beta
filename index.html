@@ -22,7 +22,7 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eff2f5;color:#1
 <div class="nav"><div class="nav-inner"><button id="nav-home" class="active" onclick="openScreen('home')">Home</button><button id="nav-today" onclick="openScreen('today')">Today</button><button id="nav-reports" onclick="openScreen('reports')">Reports</button></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
- 
+<script>
 async function lookupBarcode(){
   const code=document.getElementById('barcodeCode').value.trim();
   if(!code) return;
@@ -30,7 +30,7 @@ async function lookupBarcode(){
   setBarcodeStatus('Looking up product...');
 
   try{
-    const url=`https://world.openfoodfacts.org/api/v2/product/${code}.json`;
+const url=`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,nutriments`;    
     const resp=await fetch(url);
     const data=await resp.json();
 
