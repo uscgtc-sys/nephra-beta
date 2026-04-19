@@ -125,11 +125,10 @@ async function startScanner(){
           const code=codes[0].rawValue;
 
           document.getElementById('barcodeCode').value=code;
-          setBarcodeStatus('lookup running: '+code);
+          setBarcodeStatus('LOOKUP RUNNING: '+code);
 
           stopScanner();
-
-          lookupBarcode(); // 🔥 THIS IS THE KEY PART
+          lookupBarcode();
         }
       }catch(e){}
     },500);
