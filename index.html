@@ -125,7 +125,7 @@ async function startScanner(){
           const code=codes[0].rawValue;
 
           document.getElementById('barcodeCode').value=code;
-          setBarcodeStatus('LOOKUP RUNNING: '+code);
+          setBarcodeStatus('LOOKUP RUNNING V2: '+code);
 
           stopScanner();
           lookupBarcode();
