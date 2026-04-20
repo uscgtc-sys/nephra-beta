@@ -7,7 +7,7 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eff2f5;color:#1
 </style></head><body>
 <div id="app">
 <section id="screen-home" class="screen active"><h1 style="margin:0 0 8px;font-size:30px">Nephra Test 2</h1><div id="homeScore" class="muted">Today Score: 0</div><div style="height:16px"></div><button class="btn primary" onclick="openScreen('barcode')">Barcode</button><button class="btn success" onclick="openScreen('prepared')">Prepared Food</button></section>
- <button id="installBtn" class="btn outline" hidden>Install App</button>
+ 
 
 <section id="screen-barcode" class="screen"><button class="btn outline" onclick="stopScanner();openScreen('home')">Back</button><div class="card"><h2 style="margin-top:0">Barcode</h2><div class="muted">You can scan a barcode live or enter it manually.</div><div style="height:12px"></div><div class="videoWrap"><video id="barcodeVideo" playsinline muted autoplay></video><div id="videoFallback" class="muted">Tap Start Scanner to open the camera.</div></div><div style="height:12px"></div><button class="btn primary" onclick="startScanner()">Start Scanner</button><button class="btn outline" onclick="stopScanner()">Stop Scanner</button><div id="barcodeStatus" class="muted">Scanner ready.</div><label>Barcode or UPC</label><input id="barcodeCode" placeholder="Scan or enter barcode"><label>Product name</label><input id="barcodeName" placeholder="Optional product name"><label>Servings Consumed</label><input id="barcodeServings" type="number" step="0.1" value="1"><label>Sodium per serving (mg)</label><input id="barcodeSodium" type="number" step="1" value="0"><label>Potassium per serving (mg)</label><input id="barcodePotassium" type="number" step="1" value="0"><label>Phosphorus per serving (mg)</label><input id="barcodePhosphorus" type="number" step="1" value="0"><div class="small muted" style="margin:8px 0 0">Enter the actual label values for accurate scoring.</div><div style="height:14px"></div><button class="btn success" onclick="estimateBarcode()">Use This Result</button></div></section>
 
@@ -210,25 +210,5 @@ if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.se
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
  
-let deferredInstallPrompt = null;
-const installBtn = document.getElementById('installBtn');
 
-window.addEventListener('beforeinstallprompt', (event) => {
-  event.preventDefault();
-  deferredInstallPrompt = event;
-  installBtn.hidden = false;
-});
-
-installBtn.addEventListener('click', async () => {
-  if (!deferredInstallPrompt) return;
-
-  deferredInstallPrompt.prompt();
-  deferredInstallPrompt = null;
-  installBtn.hidden = true;
-});
-
-window.addEventListener('appinstalled', () => {
-  deferredInstallPrompt = null;
-  installBtn.hidden = true;
-});
 </script></body></html>
