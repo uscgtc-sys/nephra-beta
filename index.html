@@ -15,7 +15,24 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eff2f5;color:#1
 
 <section id="screen-result" class="screen"><button class="btn outline" onclick="openScreen(lastScreen)">Back</button><div class="card"><div id="resultLevelPill" class="pill limit">Limit</div><h2 id="resultTitle" style="margin-top:0">Result</h2><div id="resultSubtype" class="muted"></div><div style="height:6px"></div><div id="resultSource" class="muted"></div><div style="height:6px"></div><div id="resultConfidence"></div></div><div class="card"><h2 style="margin-top:0">Why</h2><div id="resultWhy"></div></div><div class="card"><h2 style="margin-top:0">Key Nutrients</h2><div class="kv"><span>Sodium</span><strong id="resultSodium"></strong></div><div class="kv"><span>Potassium</span><strong id="resultPotassium"></strong></div><div class="kv"><span>Phosphorus</span><strong id="resultPhosphorus"></strong></div></div><div class="card"><h2 style="margin-top:0">Recommendation Notes</h2><div id="resultNotes"></div></div><button class="btn success" onclick="addCurrentResultToToday()">Add to Today</button></section>
 
-<section id="screen-today" class="screen"><h2>Today</h2><div class="card" style="text-align:center"><div class="score" id="todayScoreCircle">0</div><div style="font-size:22px;font-weight:700">Daily Renal Score</div></div><div class="card"><h2 style="margin-top:0">Daily Totals</h2><div class="kv"><span>Sodium</span><strong id="totalSodium">0 mg</strong></div><div class="kv"><span>Potassium</span><strong id="totalPotassium">0 mg</strong></div><div class="kv"><span>Phosphorus</span><strong id="totalPhosphorus">0 mg</strong></div></div><div class="card"><h2 style="margin-top:0">Today Log</h2><div id="todayLog" class="muted">No items added yet.</div></div></section>
+<section id="screen-today" class="screen"><h2>Today</h2><div class="card">
+</div><div class="card" style="text-align:center"><div class="score" id="todayScoreCircle">0</div><div style="font-size:22px;font-weight:700">Daily Renal Score</div></div><div class="card">
+  <h2 style="margin-top:0">Water Intake</h2>
+
+  <div style="font-size:22px;font-weight:700">
+    <span id="waterTotal">0 oz</span> / 64 oz
+  </div>
+
+  <div style="height:10px;background:#ddd;border-radius:6px;margin:10px 0;">
+    <div id="waterBar" style="height:10px;width:0%;background:#4CAF50;border-radius:6px;"></div>
+  </div>
+
+  <div class="row">
+    <button class="btn outline" onclick="addWater(8)">+8 oz</button>
+    <button class="btn outline" onclick="addWater(12)">+12 oz</button>
+    <button class="btn outline" onclick="addWater(16)">+16 oz</button>
+  </div>
+</div><div class="card"><h2 style="margin-top:0">Daily Totals</h2><div class="kv"><span>Sodium</span><strong id="totalSodium">0 mg</strong></div><div class="kv"><span>Potassium</span><strong id="totalPotassium">0 mg</strong></div><div class="kv"><span>Phosphorus</span><strong id="totalPhosphorus">0 mg</strong></div></div><div class="card"><h2 style="margin-top:0">Today Log</h2><div id="todayLog" class="muted">No items added yet.</div></div></section>
 
 <section id="screen-reports" class="screen"><h2>Clinic Report</h2><div class="card"><div id="reportSummary" class="muted">Current score: 0 • Items logged: 0</div><label>Patient Name</label><input id="patientName" placeholder="Patient Name"><label>Clinic Note</label><input id="clinicNote" placeholder="Clinic Note"><div style="height:14px"></div><button class="btn primary" onclick="downloadReport()">Download PDF Report</button></div></section>
 </div>
@@ -81,6 +98,34 @@ async function lookupBarcode(){
   }
 }
 const STORAGE_KEY='nephra_prepared_food_photo_log', FOOD_VISION_ENDPOINT='/.netlify/functions/food-recognition';
+const WATER_KEY=nephra_water_log';
+ function loadWater(){
+  try{return JSON.parse(localStorage.getItem(WATER_KEY)||'[]')}
+  catch{return[]}
+}
+
+function saveWater(items){
+  localStorage.setItem(WATER_KEY, JSON.stringify(items));
+}
+
+function addWater(amount){
+  const items = loadWater();
+  items.push({
+    amount,
+    timestamp: new Date().toISOString()
+  });
+  saveWater(items);
+  renderAll();
+}
+
+function getTodayWaterTotal(){
+  const items = loadWater();
+  const today = new Date().toDateString();
+
+  return items
+    .filter(e => new Date(e.timestamp).toDateString() === today)
+    .reduce((sum, e) => sum + e.amount, 0);
+}
 let currentResult=null,lastScreen='home',selectedPortion='Medium',scannerStream=null,scannerTimer=null,scannerRunning=false,preparedPhotoData=null;
 function loadEntries(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch{return[]}} function saveEntries(items){localStorage.setItem(STORAGE_KEY,JSON.stringify(items))}
 function recommendationLabel(level){return level==='better'?'Better Choice':level==='avoid'?'Avoid':'Limit'} function buildWhy(s,p,ph){return[`Sodium: ${s} mg → ${s>=700?'Higher Concern':s<=350?'Better Choice':'Use Caution'}`,`Potassium: ${p} mg → ${p>=250?'Use Caution':'Better Choice'}`,`Phosphorus: ${ph} mg → ${ph>=150?'Higher Concern':ph<=100?'Better Choice':'Use Caution'}`]}
@@ -89,7 +134,8 @@ function totals(items){return items.reduce((a,e)=>({sodium:a.sodium+e.sodium,pot
 function openScreen(name){if(name!=='barcode')stopScanner();document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));document.getElementById('screen-'+name).classList.add('active');document.querySelectorAll('.nav button').forEach(el=>el.classList.remove('active'));const nav=document.getElementById('nav-'+name);if(nav)nav.classList.add('active');renderAll()}
 function setPortion(event){event.preventDefault();selectedPortion=event.target.dataset.portion;document.querySelectorAll('#portionGroup button').forEach(btn=>btn.classList.remove('active'));event.target.classList.add('active')}
 function setBarcodeStatus(msg){document.getElementById('barcodeStatus').textContent=msg} function setPreparedStatus(msg){document.getElementById('preparedStatus').textContent=msg}
-async function startScanner(){
+
+ async function startScanner(){
   const video=document.getElementById('barcodeVideo');
   const fallback=document.getElementById('videoFallback');
 
@@ -201,6 +247,18 @@ async function recognizePreparedFood(){
     setPreparedStatus('Recognition failed: ' + e.message);
   }
 }
+const water = getTodayWaterTotal();
+const goal = 64;
+
+const waterEl = document.getElementById('waterTotal');
+const waterBar = document.getElementById('waterBar');
+
+if(waterEl) waterEl.textContent = water + ' oz';
+
+if(waterBar){
+  const pct = Math.min(100, Math.round((water / goal) * 100));
+  waterBar.style.width = pct + '%';
+} 
 function estimatePrepared(){const meal=document.getElementById('mealType').value;const protein=document.getElementById('proteinType').value;const cheese=document.getElementById('extraCheese').checked;const cream=document.getElementById('extraCream').checked;const gravy=document.getElementById('extraGravy').checked;const processed=document.getElementById('extraProcessed').checked;const salt=document.getElementById('extraSalt').checked;let sodium=500,potassium=150,phosphorus=110;if(meal==='Sandwich'){sodium=620;potassium=140;phosphorus=120}else if(meal==='Soup'){sodium=950;potassium=170;phosphorus=120}else if(meal==='Dinner Plate'){sodium=700;potassium=180;phosphorus=130}else if(meal==='Salad'){sodium=280;potassium=220;phosphorus=80}else if(meal==='Casserole'){sodium=820;potassium=180;phosphorus=160}else if(meal==='Rice Bowl'){sodium=650;potassium=170;phosphorus=130}else if(meal==='Stir Fry'){sodium=700;potassium=210;phosphorus=125}else if(meal==='Burrito Bowl'){sodium=760;potassium=240;phosphorus=145}else if(meal==='Breakfast Plate'){sodium=720;potassium=160;phosphorus=135}if(protein==='Chicken'){sodium+=20;phosphorus+=10}else if(protein==='Beef'){sodium+=40;potassium+=20;phosphorus+=15}else if(protein==='Ham'){sodium+=220;phosphorus+=25}else if(protein==='Turkey'){sodium+=80;phosphorus+=12}else if(protein==='Fish'){potassium+=25;phosphorus+=18}else if(protein==='Eggs'){phosphorus+=20}else if(protein==='None'){sodium-=40;phosphorus-=10}if(cheese){sodium+=180;phosphorus+=45}if(cream){sodium+=150;phosphorus+=35}if(gravy){sodium+=190}if(processed){sodium+=250;phosphorus+=30}if(salt){sodium+=220}if(selectedPortion==='Small'){sodium=Math.round(sodium*0.8);potassium=Math.round(potassium*0.8);phosphorus=Math.round(phosphorus*0.8)}else if(selectedPortion==='Large'){sodium=Math.round(sodium*1.2);potassium=Math.round(potassium*1.2);phosphorus=Math.round(phosphorus*1.2)}let level='limit';if(sodium>=850||phosphorus>=150)level='avoid';else if(sodium<=350&&phosphorus<=100)level='better';const extras=[];if(cheese)extras.push('cheese');if(cream)extras.push('cream sauce');if(gravy)extras.push('gravy');if(processed)extras.push('processed meat');if(salt)extras.push('salt-heavy seasoning');const title=extras.length?`${meal} with ${protein} + ${extras.join(', ')}`:`${meal} with ${protein}`;currentResult={title,subtype:'Structured prepared food estimate',source:'Structured meal entry',sodium,potassium,phosphorus,level,confidence:'Moderate',notes:'Estimated using meal type, protein, portion, and extras.',why:buildWhy(sodium,potassium,phosphorus)};lastScreen='prepared';showResult()}
 function showResult(){document.getElementById('resultTitle').textContent=currentResult.title;document.getElementById('resultSubtype').textContent=currentResult.subtype;document.getElementById('resultSource').textContent='Source: '+currentResult.source;document.getElementById('resultConfidence').textContent='Confidence: '+currentResult.confidence;document.getElementById('resultSodium').textContent=currentResult.sodium+' mg';document.getElementById('resultPotassium').textContent=currentResult.potassium+' mg';document.getElementById('resultPhosphorus').textContent=currentResult.phosphorus+' mg';document.getElementById('resultNotes').textContent=currentResult.notes;const pill=document.getElementById('resultLevelPill');pill.textContent=recommendationLabel(currentResult.level);pill.className='pill '+currentResult.level;document.getElementById('resultWhy').innerHTML=currentResult.why.map(x=>`<div class="list-item">${x}</div>`).join('');openScreen('result')}
 function addCurrentResultToToday(){if(!currentResult)return;const items=loadEntries();items.push({...currentResult,timestamp:new Date().toISOString()});saveEntries(items);alert('Added to Today');openScreen('today')}
