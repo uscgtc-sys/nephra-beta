@@ -7,6 +7,7 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eff2f5;color:#1
 </style></head><body>
 <div id="app">
 <section id="screen-home" class="screen active"><h1 style="margin:0 0 8px;font-size:30px">Nephra Test 2</h1><div id="homeScore" class="muted">Today Score: 0</div><div style="height:16px"></div><button class="btn primary" onclick="openScreen('barcode')">Barcode</button><button class="btn success" onclick="openScreen('prepared')">Prepared Food</button></section>
+ <button id="installBtn" class="btn outline" hidden>Install App</button>
 
 <section id="screen-barcode" class="screen"><button class="btn outline" onclick="stopScanner();openScreen('home')">Back</button><div class="card"><h2 style="margin-top:0">Barcode</h2><div class="muted">You can scan a barcode live or enter it manually.</div><div style="height:12px"></div><div class="videoWrap"><video id="barcodeVideo" playsinline muted autoplay></video><div id="videoFallback" class="muted">Tap Start Scanner to open the camera.</div></div><div style="height:12px"></div><button class="btn primary" onclick="startScanner()">Start Scanner</button><button class="btn outline" onclick="stopScanner()">Stop Scanner</button><div id="barcodeStatus" class="muted">Scanner ready.</div><label>Barcode or UPC</label><input id="barcodeCode" placeholder="Scan or enter barcode"><label>Product name</label><input id="barcodeName" placeholder="Optional product name"><label>Servings Consumed</label><input id="barcodeServings" type="number" step="0.1" value="1"><label>Sodium per serving (mg)</label><input id="barcodeSodium" type="number" step="1" value="0"><label>Potassium per serving (mg)</label><input id="barcodePotassium" type="number" step="1" value="0"><label>Phosphorus per serving (mg)</label><input id="barcodePhosphorus" type="number" step="1" value="0"><div class="small muted" style="margin:8px 0 0">Enter the actual label values for accurate scoring.</div><div style="height:14px"></div><button class="btn success" onclick="estimateBarcode()">Use This Result</button></div></section>
 
@@ -206,4 +207,28 @@ function addCurrentResultToToday(){if(!currentResult)return;const items=loadEntr
 function renderAll(){const items=loadEntries();const score=computeDailyScore(items);const t=totals(items);document.getElementById('homeScore').textContent='Today Score: '+score;document.getElementById('todayScoreCircle').textContent=score;document.getElementById('totalSodium').textContent=t.sodium+' mg';document.getElementById('totalPotassium').textContent=t.potassium+' mg';document.getElementById('totalPhosphorus').textContent=t.phosphorus+' mg';document.getElementById('reportSummary').textContent=`Current score: ${score} • Items logged: ${items.length}`;const log=document.getElementById('todayLog');if(!items.length)log.textContent='No items added yet.';else log.innerHTML=items.slice().reverse().map(e=>`<div class="list-item">${e.title} • ${recommendationLabel(e.level)} • Sodium ${e.sodium} mg</div>`).join('')}
 function downloadReport(){const items=loadEntries();const t=totals(items);const score=computeDailyScore(items);const patient=document.getElementById('patientName').value.trim()||'Patient';const note=document.getElementById('clinicNote').value.trim();const {jsPDF}=window.jspdf;const doc=new jsPDF();let y=16;doc.setFontSize(18);doc.text('Nephra Clinic Report',14,y);y+=10;doc.setFontSize(11);doc.text('Patient: '+patient,14,y);y+=7;doc.text('Generated: '+new Date().toLocaleString(),14,y);y+=7;doc.text('Daily Renal Score: '+score,14,y);y+=7;doc.text('Total Sodium: '+t.sodium+' mg',14,y);y+=7;doc.text('Total Potassium: '+t.potassium+' mg',14,y);y+=7;doc.text('Total Phosphorus: '+t.phosphorus+' mg',14,y);y+=10;if(note){doc.text('Clinic Note: '+note,14,y);y+=10}doc.setFontSize(13);doc.text('Today Log',14,y);y+=8;doc.setFontSize(10);if(!items.length)doc.text('No items added today.',14,y);else items.forEach(e=>{const line=`${e.title} | ${recommendationLabel(e.level)} | Sodium ${e.sodium} mg | Potassium ${e.potassium} mg | Phosphorus ${e.phosphorus} mg`;const split=doc.splitTextToSize(line,180);if(y>270){doc.addPage();y=16}doc.text(split,14,y);y+=split.length*5+2});doc.save('nephra_clinic_report.pdf')}
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js').catch(()=>{}))} renderAll();
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script>
+ 
+let deferredInstallPrompt = null;
+const installBtn = document.getElementById('installBtn');
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  installBtn.hidden = false;
+});
+
+installBtn.addEventListener('click', async () => {
+  if (!deferredInstallPrompt) return;
+
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt = null;
+  installBtn.hidden = true;
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  installBtn.hidden = true;
+});
 </script></body></html>
