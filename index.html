@@ -41,8 +41,30 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eff2f5;color:#1
 
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
- 
-async function lookupBarcode(){
+function hasPhosphateAdditives(ingredientsText){
+  const text = String(ingredientsText || '').toLowerCase();
+
+  const phosphateTerms = [
+    'phosphate',
+    'phosphoric acid',
+    'sodium phosphate',
+    'calcium phosphate',
+    'potassium phosphate',
+    'pyrophosphate',
+    'hexametaphosphate',
+    'triphosphate',
+    'monocalcium phosphate',
+    'dicalcium phosphate'
+  ];
+
+  return phosphateTerms.some(term => text.includes(term));
+} 
+
+
+  setBarcodeStatus('Looking up product...');
+
+  try{
+    let url=`https://world.openfoodfacts.org/api/v2/async function lookupBarcode(){
   const code=document.getElementById('barcodeCode').value.trim();
   if(!code){
     setBarcodeStatus('Enter or scan a barcode first.');
@@ -52,7 +74,82 @@ async function lookupBarcode(){
   setBarcodeStatus('Looking up product...');
 
   try{
-    let url=`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,nutriments`;
+    let url=`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,nutriments,ingredients_text,ingredients_tags,categories_tags`;
+    let resp=await fetch(url);
+    let data=await resp.json();
+
+    let product=null;
+
+    if(data.status===1){
+      product=data.product;
+    } else {
+      setBarcodeStatus('Searching database...');
+      const searchUrl=`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(code)}&search_simple=1&action=process&json=1`;
+      const searchResp=await fetch(searchUrl);
+      const searchData=await searchResp.json();
+
+      if(searchData.products && searchData.products.length){
+        product=searchData.products[0];
+      }
+    }
+
+    if(!product){
+      setBarcodeStatus('Product not found. Enter label values manually.');
+      return;
+    }
+
+    const nutriments = product.nutriments || {};
+    const ingredientsText = product.ingredients_text || '';
+
+    document.getElementById('barcodeName').value =
+      product.product_name || 'Unknown product';
+
+    // Sodium
+    let sodium = nutriments.sodium_100g;
+    if(sodium!==undefined && sodium!==null && sodium!==''){
+      sodium = Math.round(Number(sodium) * 1000); // grams to mg
+    } else {
+      sodium = 0;
+    }
+
+    // Potassium
+    let potassium = nutriments.potassium_100g;
+    if(potassium!==undefined && potassium!==null && potassium!==''){
+      potassium = Math.round(Number(potassium) * 1000); // grams to mg
+    } else {
+      potassium = 0;
+    }
+
+    // Phosphorus
+    let phosphorus = nutriments.phosphorus_100g;
+    if(phosphorus!==undefined && phosphorus!==null && phosphorus!==''){
+      phosphorus = Math.round(Number(phosphorus) * 1000); // grams to mg if OFF stores as g
+    } else {
+      phosphorus = 0;
+    }
+
+    // Ingredient-based phosphate additive detection
+    const phosphateFlag = hasPhosphateAdditives(ingredientsText);
+
+    if(phosphorus === 0 && phosphateFlag){
+      phosphorus = 180; // heuristic risk estimate
+    }
+
+    document.getElementById('barcodeSodium').value = sodium;
+    document.getElementById('barcodePotassium').value = potassium;
+    document.getElementById('barcodePhosphorus').value = phosphorus;
+
+    if(phosphateFlag){
+      setBarcodeStatus('Product loaded. Phosphate additives detected in ingredients.');
+    } else {
+      setBarcodeStatus('Product loaded. Verify values.');
+    }
+
+  }catch(e){
+    console.error(e);
+    setBarcodeStatus('Lookup failed.');
+  }
+}product/${encodeURIComponent(code)}.json?fields=product_name,nutriments`;
     let resp=await fetch(url);
     let data=await resp.json();
 
