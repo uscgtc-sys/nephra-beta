@@ -61,10 +61,7 @@ function hasPhosphateAdditives(ingredientsText){
 } 
 
 
-  setBarcodeStatus('Looking up product...');
-
-  try{
-    let url=`https://world.openfoodfacts.org/api/v2/async function lookupBarcode(){
+async function lookupBarcode(){
   const code=document.getElementById('barcodeCode').value.trim();
   if(!code){
     setBarcodeStatus('Enter or scan a barcode first.');
@@ -74,7 +71,7 @@ function hasPhosphateAdditives(ingredientsText){
   setBarcodeStatus('Looking up product...');
 
   try{
-    let url=`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,nutriments,ingredients_text,ingredients_tags,categories_tags`;
+    let url=`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,nutriments,ingredients_text`;
     let resp=await fetch(url);
     let data=await resp.json();
 
@@ -94,7 +91,7 @@ function hasPhosphateAdditives(ingredientsText){
     }
 
     if(!product){
-      setBarcodeStatus('Product not found. Enter label values manually.');
+      setBarcodeStatus('Product not found. Enter manually.');
       return;
     }
 
@@ -104,35 +101,19 @@ function hasPhosphateAdditives(ingredientsText){
     document.getElementById('barcodeName').value =
       product.product_name || 'Unknown product';
 
-    // Sodium
     let sodium = nutriments.sodium_100g;
-    if(sodium!==undefined && sodium!==null && sodium!==''){
-      sodium = Math.round(Number(sodium) * 1000); // grams to mg
-    } else {
-      sodium = 0;
-    }
+    sodium = sodium ? Math.round(Number(sodium) * 1000) : 0;
 
-    // Potassium
     let potassium = nutriments.potassium_100g;
-    if(potassium!==undefined && potassium!==null && potassium!==''){
-      potassium = Math.round(Number(potassium) * 1000); // grams to mg
-    } else {
-      potassium = 0;
-    }
+    potassium = potassium ? Math.round(Number(potassium) * 1000) : 0;
 
-    // Phosphorus
     let phosphorus = nutriments.phosphorus_100g;
-    if(phosphorus!==undefined && phosphorus!==null && phosphorus!==''){
-      phosphorus = Math.round(Number(phosphorus) * 1000); // grams to mg if OFF stores as g
-    } else {
-      phosphorus = 0;
-    }
+    phosphorus = phosphorus ? Math.round(Number(phosphorus) * 1000) : 0;
 
-    // Ingredient-based phosphate additive detection
     const phosphateFlag = hasPhosphateAdditives(ingredientsText);
 
     if(phosphorus === 0 && phosphateFlag){
-      phosphorus = 180; // heuristic risk estimate
+      phosphorus = 180;
     }
 
     document.getElementById('barcodeSodium').value = sodium;
@@ -140,60 +121,16 @@ function hasPhosphateAdditives(ingredientsText){
     document.getElementById('barcodePhosphorus').value = phosphorus;
 
     if(phosphateFlag){
-      setBarcodeStatus('Product loaded. Phosphate additives detected in ingredients.');
+      setBarcodeStatus('Loaded. Phosphate additives detected.');
     } else {
-      setBarcodeStatus('Product loaded. Verify values.');
+      setBarcodeStatus('Product loaded.');
     }
 
   }catch(e){
     console.error(e);
     setBarcodeStatus('Lookup failed.');
   }
-}product/${encodeURIComponent(code)}.json?fields=product_name,nutriments`;
-    let resp=await fetch(url);
-    let data=await resp.json();
-
-    let product=null;
-
-    if(data.status===1){
-      product=data.product;
-    } else {
-      setBarcodeStatus('Searching database...');
-      const searchUrl=`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(code)}&search_simple=1&action=process&json=1`;
-      const searchResp=await fetch(searchUrl);
-      const searchData=await searchResp.json();
-
-      if(searchData.products && searchData.products.length){
-        product=searchData.products[0];
-      }
-    }
-
-    if(!product){
-      setBarcodeStatus('Product not found. Enter label values manually.');
-      return;
-    }
-
-    const nutriments=product.nutriments || {};
-
-    document.getElementById('barcodeName').value =
-      product.product_name || 'Unknown product';
-
-    let sodium = nutriments.sodium_100g;
-    if(sodium!==undefined && sodium!==null && sodium!==''){
-      sodium = Math.round(Number(sodium) * 1000);
-    } else {
-      sodium = 0;
-    }
-
-    document.getElementById('barcodeSodium').value = sodium;
-
-    setBarcodeStatus('Product loaded. Verify values.');
-
-  }catch(e){
-    console.error(e);
-    setBarcodeStatus('Lookup failed.');
-  }
-}
+}  
 const STORAGE_KEY='nephra_prepared_food_photo_log', FOOD_VISION_ENDPOINT='/.netlify/functions/food-recognition';
 const WATER_KEY='nephra_water_log';
  function loadWater(){
