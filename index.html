@@ -160,7 +160,11 @@ function getTodayWaterTotal(){
     .filter(e => new Date(e.timestamp).toDateString() === today)
     .reduce((sum, e) => sum + e.amount, 0);
 }
-let currentResult=null,lastScreen='home',selectedPortion='Medium',scannerStream=null,scannerTimer=null,scannerRunning=false,preparedPhotoData=null;
+let currentResult=null,lastScreen='home',selectedPortion='Medium',scannerStream=null,scannerTimer=null,scannerRunning=false,preparedPhotoData=null;let zxingReader = null;
+let zxingControls = null;
+let lastSeenCode = '';
+let lastSeenCount = 0;
+ 
 function loadEntries(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch{return[]}} function saveEntries(items){localStorage.setItem(STORAGE_KEY,JSON.stringify(items))}
 function recommendationLabel(level){return level==='better'?'Better Choice':level==='avoid'?'Avoid':'Limit'} function buildWhy(s,p,ph){return[`Sodium: ${s} mg → ${s>=700?'Higher Concern':s<=350?'Better Choice':'Use Caution'}`,`Potassium: ${p} mg → ${p>=250?'Use Caution':'Better Choice'}`,`Phosphorus: ${ph} mg → ${ph>=150?'Higher Concern':ph<=100?'Better Choice':'Use Caution'}`]}
 function computeDailyScore(items){if(!items.length)return 0;const scores=items.map(e=>{let score=100;score-=Math.min(Math.round(e.sodium/25),40);score-=Math.min(Math.round(e.potassium/20),20);score-=Math.min(Math.round(e.phosphorus/10),20);if(e.level==='avoid')score-=10;return Math.max(10,Math.min(100,score))});return Math.round(scores.reduce((a,b)=>a+b,0)/scores.length)}
@@ -168,58 +172,138 @@ function totals(items){return items.reduce((a,e)=>({sodium:a.sodium+e.sodium,pot
 function openScreen(name){if(name!=='barcode')stopScanner();document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));document.getElementById('screen-'+name).classList.add('active');document.querySelectorAll('.nav button').forEach(el=>el.classList.remove('active'));const nav=document.getElementById('nav-'+name);if(nav)nav.classList.add('active');renderAll()}
 function setPortion(event){event.preventDefault();selectedPortion=event.target.dataset.portion;document.querySelectorAll('#portionGroup button').forEach(btn=>btn.classList.remove('active'));event.target.classList.add('active')}
 function setBarcodeStatus(msg){document.getElementById('barcodeStatus').textContent=msg} function setPreparedStatus(msg){document.getElementById('preparedStatus').textContent=msg}
+function normalizeBarcode(code){
+  code = String(code || '').trim().replace(/[^\dA-Za-z]/g, '');
 
- async function startScanner(){
-  const video=document.getElementById('barcodeVideo');
-  const fallback=document.getElementById('videoFallback');
-
-  if(!('BarcodeDetector' in window)){
-    setBarcodeStatus('Live scanner not supported on this browser.');
-    return;
+  // Common normalization for UPC-A sometimes arriving as EAN-13 with leading zero
+  if(code.length === 13 && code.startsWith('0')){
+    code = code.slice(1);
   }
+
+  return code;
+}
+async function startScanner(){
+  const video = document.getElementById('barcodeVideo');
+  const fallback = document.getElementById('videoFallback');
 
   try{
     stopScanner();
 
-    scannerStream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{ideal:'environment'}},
-      audio:false
-    });
+    setBarcodeStatus('Starting scanner...');
 
-    video.srcObject=scannerStream;
-    fallback.style.display='none';
-    await video.play();
+    // Load ZXing dynamically so you do not have to restructure your whole page
+    const ZXingBrowser = await import('https://esm.sh/@zxing/browser');
+    const ZXingLib = await import('https://esm.sh/@zxing/library');
 
-    const detector=new BarcodeDetector({
-      formats:['ean_13','ean_8','upc_a','upc_e','code_128']
-    });
+    const {
+      BrowserMultiFormatReader
+    } = ZXingBrowser;
 
-    scannerRunning=true;
-    setBarcodeStatus('Scanning...');
+    const {
+      DecodeHintType,
+      BarcodeFormat,
+      NotFoundException
+    } = ZXingLib;
 
-    scannerTimer=setInterval(async()=>{
-      if(!scannerRunning)return;
+    const hints = new Map();
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+      BarcodeFormat.UPC_A,
+      BarcodeFormat.UPC_E,
+      BarcodeFormat.EAN_8,
+      BarcodeFormat.EAN_13,
+      BarcodeFormat.CODE_128
+    ]);
+    hints.set(DecodeHintType.TRY_HARDER, true);
 
-      try{
-        const codes=await detector.detect(video);
-        if(codes.length){
-          const code=codes[0].rawValue;
+    zxingReader = new BrowserMultiFormatReader(hints);
 
-          document.getElementById('barcodeCode').value=code;
-          setBarcodeStatus('LOOKUP RUNNING V2: '+code);
+    lastSeenCode = '';
+    lastSeenCount = 0;
+    scannerRunning = true;
 
-          stopScanner();
-          lookupBarcode();
+    fallback.style.display = 'none';
+    setBarcodeStatus('Scanning... hold steady');
+
+    zxingControls = await zxingReader.decodeFromVideoDevice(
+      undefined,
+      video,
+      (result, error, controls) => {
+        if(!scannerRunning) return;
+
+        if(result){
+          let raw = normalizeBarcode(result.getText());
+          if(!raw) return;
+
+          if(raw === lastSeenCode){
+            lastSeenCount++;
+          } else {
+            lastSeenCode = raw;
+            lastSeenCount = 1;
+          }
+
+          // Require same read twice to reduce false scans
+          if(lastSeenCount >= 2){
+            document.getElementById('barcodeCode').value = raw;
+            setBarcodeStatus('Code captured. Looking up product...');
+            stopScanner();
+            lookupBarcode();
+          }
+          return;
         }
-      }catch(e){}
-    },500);
+
+        if(error && !(error instanceof NotFoundException)){
+          console.error(error);
+        }
+      }
+    );
 
   }catch(e){
-    fallback.style.display='block';
-    setBarcodeStatus('Camera failed.');
+    console.error(e);
+    fallback.style.display = 'block';
+    setBarcodeStatus('Camera scanner unavailable. Enter barcode manually.');
   }
 }
-function stopScanner(){scannerRunning=false;if(scannerTimer){clearInterval(scannerTimer);scannerTimer=null}if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null}const video=document.getElementById('barcodeVideo');if(video)video.srcObject=null;const fallback=document.getElementById('videoFallback');if(fallback)fallback.style.display='block'}
+function stopScanner(){
+  scannerRunning = false;
+  lastSeenCode = '';
+  lastSeenCount = 0;
+
+  if(scannerTimer){
+    clearInterval(scannerTimer);
+    scannerTimer = null;
+  }
+
+  if(zxingControls){
+    try{
+      zxingControls.stop();
+    }catch(e){}
+    zxingControls = null;
+  }
+
+  if(zxingReader){
+    try{
+      zxingReader.reset();
+    }catch(e){}
+    zxingReader = null;
+  }
+
+  if(scannerStream){
+    try{
+      scannerStream.getTracks().forEach(t => t.stop());
+    }catch(e){}
+    scannerStream = null;
+  }
+
+  const video = document.getElementById('barcodeVideo');
+  if(video){
+    try{
+      video.srcObject = null;
+    }catch(e){}
+  }
+
+  const fallback = document.getElementById('videoFallback');
+  if(fallback) fallback.style.display = 'block';
+}
 function scoreFromLabel(sodium,potassium,phosphorus){let level='limit';if(sodium>=850||phosphorus>=150)level='avoid';else if(sodium<=350&&phosphorus<=100)level='better';return level}
 function estimateBarcode(){const raw=document.getElementById('barcodeCode').value.trim();if(!raw){alert('Enter or scan a barcode first');return;}const name=document.getElementById('barcodeName').value.trim()||('Barcode Item '+raw);const consumed=parseFloat(document.getElementById('barcodeServings').value||'1')||1;const sodium=Math.round((parseFloat(document.getElementById('barcodeSodium').value||'0')||0)*consumed);const potassium=Math.round((parseFloat(document.getElementById('barcodePotassium').value||'0')||0)*consumed);const phosphorus=Math.round((parseFloat(document.getElementById('barcodePhosphorus').value||'0')||0)*consumed);const level=scoreFromLabel(sodium,potassium,phosphorus);currentResult={title:name,subtype:'Barcode / label-value scoring',source:'Barcode scan or manual entry + typed label values',sodium,potassium,phosphorus,level,confidence:'Higher',notes:`Scored from the label values entered for ${consumed} serving(s).`,why:buildWhy(sodium,potassium,phosphorus)};lastScreen='barcode';showResult()}
 function readPreparedFile(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{preparedPhotoData=reader.result;document.getElementById('preparedPreview').src=preparedPhotoData;document.getElementById('preparedPreview').style.display='block';document.getElementById('preparedFallback').style.display='none';setPreparedStatus('Photo ready. Tap Recognize Food.')};reader.onerror=()=>setPreparedStatus('Could not read photo.');reader.readAsDataURL(file)}
