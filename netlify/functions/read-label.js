@@ -21,15 +21,18 @@ exports.handler = async function(event, context) {
     }
 
     const prompt = [
-      "Read this nutrition label image.",
-      "Return ONLY valid JSON with this exact shape:",
-      '{"title":string,"servings":number,"sodium":number,"potassium":number,"phosphorus":number}',
-      "Use mg for sodium, potassium, and phosphorus.",
-      "If potassium or phosphorus are not visible on the label, return 0 for those fields.",
-      "If product title is not visible, return an empty string.",
-      "If servings consumed is not shown, return 1.",
-      "Do not include markdown or explanation."
-    ].join(" ");
+  "Read this nutrition label image carefully.",
+  "Only extract values that are clearly visible in the Nutrition Facts label.",
+  "Do not guess or infer a different product.",
+  "If the product name is not clearly visible, return an empty string.",
+  "If sodium, potassium, or phosphorus are not clearly visible, return 0 for that field.",
+  "Return ONLY valid JSON with this exact shape:",
+  '{"title":string,"servings":number,"sodium":number,"potassium":number,"phosphorus":number}',
+  "Use mg for sodium, potassium, and phosphorus.",
+  "If servings consumed is not shown, return 1.",
+  "Ignore marketing text, packaging claims, and unrelated text outside the nutrition label.",
+  "Do not include markdown or explanation."
+].join(" ");
 
     const resp = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
