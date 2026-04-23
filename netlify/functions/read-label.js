@@ -20,17 +20,19 @@ exports.handler = async function(event, context) {
       return json(400, { error: "Missing image data URL" });
     }
 
-    const prompt = [
+const prompt = [
   "Read this nutrition label image carefully.",
-  "Only extract values that are clearly visible in the Nutrition Facts label.",
-  "Do not guess or infer a different product.",
+  "Only extract values that are clearly visible in the Nutrition Facts panel.",
+  "Do not guess or infer values that are not clearly shown.",
+  "Ignore marketing text, front-of-package branding, and unrelated packaging text.",
   "If the product name is not clearly visible, return an empty string.",
   "If sodium, potassium, or phosphorus are not clearly visible, return 0 for that field.",
+  "Return a confidence level based on how clearly the label can be read.",
   "Return ONLY valid JSON with this exact shape:",
-  '{"title":string,"servings":number,"sodium":number,"potassium":number,"phosphorus":number}',
+  '{"title":string,"servings":number,"sodium":number,"potassium":number,"phosphorus":number,"confidence":string,"confidence_reason":string}',
+  "Confidence must be one of: High, Medium, Low.",
   "Use mg for sodium, potassium, and phosphorus.",
   "If servings consumed is not shown, return 1.",
-  "Ignore marketing text, packaging claims, and unrelated text outside the nutrition label.",
   "Do not include markdown or explanation."
 ].join(" ");
 
@@ -70,13 +72,15 @@ exports.handler = async function(event, context) {
       return json(500, { error: "Could not parse label output: " + raw });
     }
 
-    return json(200, {
-      title: String(parsed.title || ""),
-      servings: safeNumber(parsed.servings, 1),
-      sodium: safeNumber(parsed.sodium, 0),
-      potassium: safeNumber(parsed.potassium, 0),
-      phosphorus: safeNumber(parsed.phosphorus, 0)
-    });
+return json(200, {
+  title: String(parsed.title || ""),
+  servings: safeNumber(parsed.servings, 1),
+  sodium: safeNumber(parsed.sodium, 0),
+  potassium: safeNumber(parsed.potassium, 0),
+  phosphorus: safeNumber(parsed.phosphorus, 0),
+  confidence: normalizeConfidence(parsed.confidence),
+  confidence_reason: String(parsed.confidence_reason || "")
+});
 
   } catch (error) {
     return json(500, {
@@ -133,4 +137,10 @@ function json(statusCode, payload) {
     },
     body: JSON.stringify(payload)
   };
+}
+function normalizeConfidence(value){
+  const v = String(value || '').toLowerCase();
+  if(v === 'high') return 'High';
+  if(v === 'medium') return 'Medium';
+  return 'Low';
 }
