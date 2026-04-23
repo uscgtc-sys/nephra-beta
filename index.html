@@ -14,7 +14,7 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eff2f5;color:#1
 <section id="screen-prepared" class="screen"><button class="btn outline" onclick="openScreen('home')">Back</button><div class="card"><h2 style="margin-top:0">Prepared Food Photo</h2><div class="muted">Take or upload a meal photo, then recognize it.</div><div style="height:12px"></div><div class="videoWrap"><img id="preparedPreview" style="display:none" alt="Prepared food preview"><div id="preparedFallback" class="muted">No photo selected yet.</div></div><div style="height:12px"></div><button class="btn primary" onclick="takePreparedPhoto()">Take Photo</button><button class="btn outline" onclick="uploadPreparedPhoto()">Upload Photo</button><button class="btn success" onclick="recognizePreparedFood()">Recognize Food</button><div id="preparedStatus" class="muted">Prepared food recognition ready.</div></div><div class="card"><h2 style="margin-top:0">Fallback Structured Meal Entry</h2><label>Meal Type</label><select id="mealType"><option>Sandwich</option><option>Soup</option><option>Dinner Plate</option><option>Salad</option><option>Casserole</option><option>Rice Bowl</option><option>Stir Fry</option><option>Burrito Bowl</option><option>Breakfast Plate</option></select><label>Protein</label><select id="proteinType"><option>Chicken</option><option>Beef</option><option>Ham</option><option>Turkey</option><option>Fish</option><option>Eggs</option><option>None</option></select><label>Portion</label><div class="row" id="portionGroup"><button class="btn outline" data-portion="Small" onclick="setPortion(event)">Small</button><button class="btn outline active" data-portion="Medium" onclick="setPortion(event)">Medium</button><button class="btn outline" data-portion="Large" onclick="setPortion(event)">Large</button></div><label>Extras</label><div><input type="checkbox" id="extraCheese"> Cheese</div><div><input type="checkbox" id="extraCream"> Cream sauce</div><div><input type="checkbox" id="extraGravy"> Gravy</div><div><input type="checkbox" id="extraProcessed"> Processed meat</div><div><input type="checkbox" id="extraSalt"> Salt-heavy seasoning</div><div style="height:14px"></div><button class="btn success" onclick="estimatePrepared()">Use Structured Result</button></div></section>
 <section id="screen-label" class="screen">
   <button class="btn outline" onclick="openScreen('home')">Back</button>
-
+<button class="btn success" onclick="readLabelWithAI()">Read Label</button>
   <div class="card">
     <h2 style="margin-top:0">Scan Nutrition Label</h2>
     <div class="muted">Take or upload a picture of the nutrition label, then enter or confirm the values below.</div>
@@ -89,6 +89,46 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eff2f5;color:#1
 
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
+ async function readLabelWithAI(){
+  if(!labelPhotoData){
+    setLabelStatus('Take or upload a label photo first.');
+    return;
+  }
+
+  setLabelStatus('Reading label...');
+
+  try{
+    const resp = await fetch('/.netlify/functions/read-label', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: labelPhotoData })
+    });
+
+    const rawText = await resp.text();
+
+    let data;
+    try{
+      data = JSON.parse(rawText);
+    }catch(e){
+      throw new Error('Invalid JSON from label reader: ' + rawText);
+    }
+
+    if(!resp.ok){
+      throw new Error(data.error || rawText || 'Label read failed');
+    }
+
+    document.getElementById('labelName').value = data.title || '';
+    document.getElementById('labelServings').value = data.servings || 1;
+    document.getElementById('labelSodium').value = data.sodium || 0;
+    document.getElementById('labelPotassium').value = data.potassium || 0;
+    document.getElementById('labelPhosphorus').value = data.phosphorus || 0;
+
+    setLabelStatus('Label read complete. Review and confirm values below.');
+  }catch(e){
+    console.error(e);
+    setLabelStatus('Label read failed: ' + e.message);
+  }
+}
 function hasPhosphateAdditives(ingredientsText){
   const text = String(ingredientsText || '').toLowerCase();
 
