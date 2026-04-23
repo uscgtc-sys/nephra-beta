@@ -117,13 +117,15 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eff2f5;color:#1
       throw new Error(data.error || rawText || 'Label read failed');
     }
 
-    document.getElementById('labelName').value = data.title || '';
+    if(data.title && data.title.length < 60){
+  document.getElementById('labelName').value = data.title;
+}
     document.getElementById('labelServings').value = data.servings || 1;
     document.getElementById('labelSodium').value = data.sodium || 0;
     document.getElementById('labelPotassium').value = data.potassium || 0;
     document.getElementById('labelPhosphorus').value = data.phosphorus || 0;
 
-    setLabelStatus('Label read complete. Review and confirm values below.');
+    setLabelStatus('Label read complete. Please confirm values before using result.');
   }catch(e){
     console.error(e);
     setLabelStatus('Label read failed: ' + e.message);
