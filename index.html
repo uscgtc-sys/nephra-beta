@@ -126,7 +126,8 @@ async function readLabelWithAI(){
     document.getElementById('labelSodium').value = data.sodium || 0;
     document.getElementById('labelPotassium').value = data.potassium || 0;
     document.getElementById('labelPhosphorus').value = data.phosphorus || 0;
-
+labelReadConfidence = data.confidence || 'Low';
+labelReadConfidenceReason = data.confidence_reason || '';
     let status = 'Label read complete. Please confirm values before using result.';
     if(data.confidence){
       status += ' Confidence: ' + data.confidence + '.';
