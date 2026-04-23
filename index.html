@@ -64,9 +64,17 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eff2f5;color:#1
 <section id="screen-result" class="screen"><button class="btn outline" onclick="openScreen(lastScreen)">Back</button><div class="card"><div id="resultLevelPill" class="pill limit">Limit</div><h2 id="resultTitle" style="margin-top:0">Result</h2><div id="resultSubtype" class="muted"></div><div style="height:6px"></div><div id="resultSource" class="muted"></div><div style="height:6px"></div><div id="resultConfidence"></div></div><div class="card"><h2 style="margin-top:0">Why</h2><div id="resultWhy"></div></div><div class="card"><h2 style="margin-top:0">Key Nutrients</h2><div class="kv"><span>Sodium</span><strong id="resultSodium"></strong></div><div class="kv"><span>Potassium</span><strong id="resultPotassium"></strong></div><div class="kv"><span>Phosphorus</span><strong id="resultPhosphorus"></strong></div></div><div class="card"><h2 style="margin-top:0">Recommendation Notes</h2><div id="resultNotes"></div></div><button class="btn success" onclick="addCurrentResultToToday()">Add to Today</button></section>
 
 <section id="screen-today" class="screen"><h2>Today</h2><div class="card">
-</div><div class="card" style="text-align:center"><div class="score" id="todayScoreCircle">0</div><div style="font-size:22px;font-weight:700">Daily Renal Score</div></div><div class="card">
-  <h2 style="margin-top:0">Water Intake</h2>
+  <h2 style="margin-top:0">Daily Intake Progress</h2>
 
+  <div class="kv"><span>Sodium</span><strong id="chartSodiumText">0 / 2000 mg</strong></div>
+  <div class="bar"><div id="chartSodiumBar" class="barFill"></div></div>
+
+  <div class="kv"><span>Potassium</span><strong id="chartPotassiumText">0 / 2000 mg</strong></div>
+  <div class="bar"><div id="chartPotassiumBar" class="barFill"></div></div>
+
+  <div class="kv"><span>Phosphorus</span><strong id="chartPhosphorusText">0 / 1000 mg</strong></div>
+  <div class="bar"><div id="chartPhosphorusBar" class="barFill"></div></div>
+</div>
   <div style="font-size:22px;font-weight:700">
     <span id="waterTotal">0 oz</span> / 64 oz
   </div>
