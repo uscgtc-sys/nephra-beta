@@ -6,13 +6,61 @@
 body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eff2f5;color:#15202b}#app{max-width:760px;margin:auto;padding:18px 18px 92px}.screen{display:none}.screen.active{display:block}.card{background:#f3f4f7;border-radius:20px;padding:18px;margin:0 0 14px}.btn{width:100%;padding:18px;border:none;border-radius:999px;font-size:20px;font-weight:700;cursor:pointer;margin:0 0 12px}.primary{background:#1A7895;color:#fff}.success{background:#0B7C59;color:#fff}.outline{background:#fff;border:2px solid #d0d8df}input,select{width:100%;padding:14px;border:1px solid #c6d0d8;border-radius:12px;font-size:17px;box-sizing:border-box}label{display:block;font-weight:700;margin:10px 0 6px}.row{display:flex;gap:8px}.row button{flex:1}.row button.active{background:#1A7895;color:#fff}.score{width:120px;height:120px;border-radius:50%;border:4px solid #1A7895;background:#fff;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;margin:0 auto 10px}.kv{display:flex;justify-content:space-between;padding:8px 0;font-size:18px}.nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #d6dde4;display:flex;justify-content:center}.nav-inner{max-width:760px;width:100%;display:flex}.nav button{flex:1;padding:14px 10px;border:none;background:#fff;font-size:16px;cursor:pointer}.nav button.active{color:#1A7895;font-weight:700}.pill{display:inline-block;padding:8px 12px;border-radius:999px;color:#fff;font-weight:700;margin-bottom:10px}.better{background:#0B7C59}.limit{background:#C97C00}.avoid{background:#9F2F2F}.list-item{padding:10px 0;border-bottom:1px solid #dbe2e8}.muted{color:#5b6975}.videoWrap{width:100%;min-height:220px;background:#d9dce1;border-radius:18px;overflow:hidden;display:flex;align-items:center;justify-content:center}video,img{width:100%;height:240px;object-fit:cover;background:#000;border-radius:18px}.small{font-size:14px}
 </style></head><body>
 <div id="app">
-<section id="screen-home" class="screen active"><h1 style="margin:0 0 8px;font-size:30px">Nephra Test 2</h1><div id="homeScore" class="muted">Today Score: 0</div><div style="height:16px"></div><button class="btn primary" onclick="openScreen('barcode')">Barcode</button><button class="btn success" onclick="openScreen('prepared')">Prepared Food</button></section>
+<section id="screen-home" class="screen active"><h1 style="margin:0 0 8px;font-size:30px">Nephra Test 2</h1><div id="homeScore" class="muted">Today Score: 0</div><div style="height:16px"></div><button class="btn primary" onclick="openScreen('barcode')">Barcode</button><button class="btn success" onclick="openScreen('prepared')">Prepared Food</button><button class="btn outline" onclick="openScreen('label')">Scan Nutrition Label</button></section>
  
 
 <section id="screen-barcode" class="screen"><button class="btn outline" onclick="stopScanner();openScreen('home')">Back</button><div class="card"><h2 style="margin-top:0">Barcode</h2><div class="muted">You can scan a barcode live or enter it manually.</div><div style="height:12px"></div><div class="videoWrap"><video id="barcodeVideo" playsinline muted autoplay></video><div id="videoFallback" class="muted">Tap Start Scanner to open the camera.</div></div><div style="height:12px"></div><button class="btn primary" onclick="startScanner()">Start Scanner</button><button class="btn outline" onclick="stopScanner()">Stop Scanner</button><div id="barcodeStatus" class="muted">Scanner ready.</div><label>Barcode or UPC</label><input id="barcodeCode" placeholder="Scan or enter barcode"><label>Product name</label><input id="barcodeName" placeholder="Optional product name"><label>Servings Consumed</label><input id="barcodeServings" type="number" step="0.1" value="1"><label>Sodium per serving (mg)</label><input id="barcodeSodium" type="number" step="1" value="0"><label>Potassium per serving (mg)</label><input id="barcodePotassium" type="number" step="1" value="0"><label>Phosphorus per serving (mg)</label><input id="barcodePhosphorus" type="number" step="1" value="0"><div class="small muted" style="margin:8px 0 0">Enter the actual label values for accurate scoring.</div><div style="height:14px"></div><button class="btn success" onclick="estimateBarcode()">Use This Result</button></div></section>
 
 <section id="screen-prepared" class="screen"><button class="btn outline" onclick="openScreen('home')">Back</button><div class="card"><h2 style="margin-top:0">Prepared Food Photo</h2><div class="muted">Take or upload a meal photo, then recognize it.</div><div style="height:12px"></div><div class="videoWrap"><img id="preparedPreview" style="display:none" alt="Prepared food preview"><div id="preparedFallback" class="muted">No photo selected yet.</div></div><div style="height:12px"></div><button class="btn primary" onclick="takePreparedPhoto()">Take Photo</button><button class="btn outline" onclick="uploadPreparedPhoto()">Upload Photo</button><button class="btn success" onclick="recognizePreparedFood()">Recognize Food</button><div id="preparedStatus" class="muted">Prepared food recognition ready.</div></div><div class="card"><h2 style="margin-top:0">Fallback Structured Meal Entry</h2><label>Meal Type</label><select id="mealType"><option>Sandwich</option><option>Soup</option><option>Dinner Plate</option><option>Salad</option><option>Casserole</option><option>Rice Bowl</option><option>Stir Fry</option><option>Burrito Bowl</option><option>Breakfast Plate</option></select><label>Protein</label><select id="proteinType"><option>Chicken</option><option>Beef</option><option>Ham</option><option>Turkey</option><option>Fish</option><option>Eggs</option><option>None</option></select><label>Portion</label><div class="row" id="portionGroup"><button class="btn outline" data-portion="Small" onclick="setPortion(event)">Small</button><button class="btn outline active" data-portion="Medium" onclick="setPortion(event)">Medium</button><button class="btn outline" data-portion="Large" onclick="setPortion(event)">Large</button></div><label>Extras</label><div><input type="checkbox" id="extraCheese"> Cheese</div><div><input type="checkbox" id="extraCream"> Cream sauce</div><div><input type="checkbox" id="extraGravy"> Gravy</div><div><input type="checkbox" id="extraProcessed"> Processed meat</div><div><input type="checkbox" id="extraSalt"> Salt-heavy seasoning</div><div style="height:14px"></div><button class="btn success" onclick="estimatePrepared()">Use Structured Result</button></div></section>
+<section id="screen-label" class="screen">
+  <button class="btn outline" onclick="openScreen('home')">Back</button>
 
+  <div class="card">
+    <h2 style="margin-top:0">Scan Nutrition Label</h2>
+    <div class="muted">Take or upload a picture of the nutrition label, then enter or confirm the values below.</div>
+
+    <div style="height:12px"></div>
+
+    <div class="videoWrap">
+      <img id="labelPreview" style="display:none" alt="Nutrition label preview">
+      <div id="labelFallback" class="muted">No label photo selected yet.</div>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <button class="btn primary" onclick="takeLabelPhoto()">Take Photo</button>
+    <button class="btn outline" onclick="uploadLabelPhoto()">Upload Photo</button>
+
+    <div id="labelStatus" class="muted">Label scan ready.</div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Label Values</h2>
+
+    <label>Product name</label>
+    <input id="labelName" placeholder="Optional product name">
+
+    <label>Servings consumed</label>
+    <input id="labelServings" type="number" step="0.1" value="1">
+
+    <label>Sodium per serving (mg)</label>
+    <input id="labelSodium" type="number" step="1" value="0">
+
+    <label>Potassium per serving (mg)</label>
+    <input id="labelPotassium" type="number" step="1" value="0">
+
+    <label>Phosphorus per serving (mg)</label>
+    <input id="labelPhosphorus" type="number" step="1" value="0">
+
+    <div class="small muted" style="margin:8px 0 0">
+      Enter the values directly from the label for the most accurate scoring.
+    </div>
+
+    <div style="height:14px"></div>
+
+    <button class="btn success" onclick="estimateLabelScan()">Use Label Result</button>
+  </div>
+</section>
 <section id="screen-result" class="screen"><button class="btn outline" onclick="openScreen(lastScreen)">Back</button><div class="card"><div id="resultLevelPill" class="pill limit">Limit</div><h2 id="resultTitle" style="margin-top:0">Result</h2><div id="resultSubtype" class="muted"></div><div style="height:6px"></div><div id="resultSource" class="muted"></div><div style="height:6px"></div><div id="resultConfidence"></div></div><div class="card"><h2 style="margin-top:0">Why</h2><div id="resultWhy"></div></div><div class="card"><h2 style="margin-top:0">Key Nutrients</h2><div class="kv"><span>Sodium</span><strong id="resultSodium"></strong></div><div class="kv"><span>Potassium</span><strong id="resultPotassium"></strong></div><div class="kv"><span>Phosphorus</span><strong id="resultPhosphorus"></strong></div></div><div class="card"><h2 style="margin-top:0">Recommendation Notes</h2><div id="resultNotes"></div></div><button class="btn success" onclick="addCurrentResultToToday()">Add to Today</button></section>
 
 <section id="screen-today" class="screen"><h2>Today</h2><div class="card">
@@ -160,11 +208,92 @@ function getTodayWaterTotal(){
     .filter(e => new Date(e.timestamp).toDateString() === today)
     .reduce((sum, e) => sum + e.amount, 0);
 }
-let currentResult=null,lastScreen='home',selectedPortion='Medium',scannerStream=null,scannerTimer=null,scannerRunning=false,preparedPhotoData=null;let zxingReader = null;
+let currentResult=null,lastScreen='home',selectedPortion='Medium',scannerStream=null,scannerTimer=null,scannerRunning=false,preparedPhotoData=null;let labelPhotoData = null;let zxingReader = null;
 let zxingControls = null;
 let lastSeenCode = '';
 let lastSeenCount = 0;
- 
+function setLabelStatus(msg){
+  const el = document.getElementById('labelStatus');
+  if(el) el.textContent = msg;
+}
+
+function readLabelFile(file){
+  if(!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    labelPhotoData = reader.result;
+    document.getElementById('labelPreview').src = labelPhotoData;
+    document.getElementById('labelPreview').style.display = 'block';
+    document.getElementById('labelFallback').style.display = 'none';
+    setLabelStatus('Label photo ready. Enter or confirm values below.');
+  };
+
+  reader.onerror = () => setLabelStatus('Could not read label photo.');
+  reader.readAsDataURL(file);
+}
+
+function takeLabelPhoto(){
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.setAttribute('capture','environment');
+
+  input.onchange = () => {
+    const file = input.files && input.files[0];
+    if(!file){
+      setLabelStatus('No label photo selected.');
+      return;
+    }
+    readLabelFile(file);
+  };
+
+  input.click();
+}
+
+function uploadLabelPhoto(){
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+
+  input.onchange = () => {
+    const file = input.files && input.files[0];
+    if(!file){
+      setLabelStatus('No label photo selected.');
+      return;
+    }
+    readLabelFile(file);
+  };
+
+  input.click();
+}
+function estimateLabelScan(){
+  const name = document.getElementById('labelName').value.trim() || 'Nutrition Label Item';
+  const consumed = parseFloat(document.getElementById('labelServings').value || '1') || 1;
+
+  const sodium = Math.round((parseFloat(document.getElementById('labelSodium').value || '0') || 0) * consumed);
+  const potassium = Math.round((parseFloat(document.getElementById('labelPotassium').value || '0') || 0) * consumed);
+  const phosphorus = Math.round((parseFloat(document.getElementById('labelPhosphorus').value || '0') || 0) * consumed);
+
+  const level = scoreFromLabel(sodium, potassium, phosphorus);
+
+  currentResult = {
+    title: name,
+    subtype: 'Nutrition label scan / manual confirmation',
+    source: 'Label photo + confirmed nutrition values',
+    sodium,
+    potassium,
+    phosphorus,
+    level,
+    confidence: 'Higher',
+    notes: `Scored from nutrition label values for ${consumed} serving(s).`,
+    why: buildWhy(sodium, potassium, phosphorus)
+  };
+
+  lastScreen = 'label';
+  showResult();
+} 
 function loadEntries(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch{return[]}} function saveEntries(items){localStorage.setItem(STORAGE_KEY,JSON.stringify(items))}
 function recommendationLabel(level){return level==='better'?'Better Choice':level==='avoid'?'Avoid':'Limit'} function buildWhy(s,p,ph){return[`Sodium: ${s} mg → ${s>=700?'Higher Concern':s<=350?'Better Choice':'Use Caution'}`,`Potassium: ${p} mg → ${p>=250?'Use Caution':'Better Choice'}`,`Phosphorus: ${ph} mg → ${ph>=150?'Higher Concern':ph<=100?'Better Choice':'Use Caution'}`]}
 function computeDailyScore(items){if(!items.length)return 0;const scores=items.map(e=>{let score=100;score-=Math.min(Math.round(e.sodium/25),40);score-=Math.min(Math.round(e.potassium/20),20);score-=Math.min(Math.round(e.phosphorus/10),20);if(e.level==='avoid')score-=10;return Math.max(10,Math.min(100,score))});return Math.round(scores.reduce((a,b)=>a+b,0)/scores.length)}
