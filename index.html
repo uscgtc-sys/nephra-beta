@@ -89,7 +89,7 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eff2f5;color:#1
 
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
- async function readLabelWithAI(){
+async function readLabelWithAI(){
   if(!labelPhotoData){
     setLabelStatus('Take or upload a label photo first.');
     return;
@@ -117,19 +117,30 @@ body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#eff2f5;color:#1
       throw new Error(data.error || rawText || 'Label read failed');
     }
 
-    if(data.title && data.title.length < 60){
-  document.getElementById('labelName').value = data.title;
-}
+    // Only fill title if it looks reasonable
+    if(data.title && data.title.length > 0 && data.title.length < 60){
+      document.getElementById('labelName').value = data.title;
+    }
+
     document.getElementById('labelServings').value = data.servings || 1;
     document.getElementById('labelSodium').value = data.sodium || 0;
     document.getElementById('labelPotassium').value = data.potassium || 0;
     document.getElementById('labelPhosphorus').value = data.phosphorus || 0;
 
-    setLabelStatus('Label read complete. Please confirm values before using result.');
+    let status = 'Label read complete. Please confirm values before using result.';
+    if(data.confidence){
+      status += ' Confidence: ' + data.confidence + '.';
+    }
+    if(data.confidence_reason){
+      status += ' ' + data.confidence_reason;
+    }
+
+    setLabelStatus(status);
   }catch(e){
     console.error(e);
     setLabelStatus('Label read failed: ' + e.message);
   }
+}
 }
 function hasPhosphateAdditives(ingredientsText){
   const text = String(ingredientsText || '').toLowerCase();
@@ -254,6 +265,8 @@ let currentResult=null,lastScreen='home',selectedPortion='Medium',scannerStream=
 let zxingControls = null;
 let lastSeenCode = '';
 let lastSeenCount = 0;
+let labelReadConfidence = 'Low';
+let labelReadConfidenceReason = '';
 function setLabelStatus(msg){
   const el = document.getElementById('labelStatus');
   if(el) el.textContent = msg;
@@ -320,18 +333,18 @@ function estimateLabelScan(){
 
   const level = scoreFromLabel(sodium, potassium, phosphorus);
 
-  currentResult = {
-    title: name,
-    subtype: 'Nutrition label scan / manual confirmation',
-    source: 'Label photo + confirmed nutrition values',
-    sodium,
-    potassium,
-    phosphorus,
-    level,
-    confidence: 'Higher',
-    notes: `Scored from nutrition label values for ${consumed} serving(s).`,
-    why: buildWhy(sodium, potassium, phosphorus)
-  };
+currentResult = {
+  title: name,
+  subtype: 'Nutrition label scan / manual confirmation',
+  source: 'Label photo + confirmed nutrition values',
+  sodium,
+  potassium,
+  phosphorus,
+  level,
+  confidence: labelReadConfidence || 'Low',
+  notes: `Scored from nutrition label values for ${consumed} serving(s). ${labelReadConfidenceReason || ''}`,
+  why: buildWhy(sodium, potassium, phosphorus)
+};
 
   lastScreen = 'label';
   showResult();
