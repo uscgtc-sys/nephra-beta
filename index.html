@@ -136,7 +136,15 @@ async function readLabelWithAI(){
     if(!resp.ok){
       throw new Error(data.error || rawText || 'Label read failed');
     }
+function isSameDay(timestamp, dateObj){
+  return new Date(timestamp).toDateString() === dateObj.toDateString();
+}
 
+function loadTodayEntries(){
+  const all = loadEntries();
+  const today = new Date();
+  return all.filter(e => isSameDay(e.timestamp, today));
+}
     // Only fill title if it looks reasonable
     if(data.title && data.title.length > 0 && data.title.length < 60){
       document.getElementById('labelName').value = data.title;
