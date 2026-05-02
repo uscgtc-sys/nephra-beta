@@ -590,7 +590,32 @@ if(scoreEl) scoreEl.textContent = score;document.getElementById('totalSodium').t
 function downloadReport(){const items=loadEntries();const t=totals(items);const score=computeDailyScore(items);const patient=document.getElementById('patientName').value.trim()||'Patient';const note=document.getElementById('clinicNote').value.trim();const {jsPDF}=window.jspdf;const doc=new jsPDF();let y=16;doc.setFontSize(18);doc.text('Nephra Clinic Report',14,y);y+=10;doc.setFontSize(11);doc.text('Patient: '+patient,14,y);y+=7;doc.text('Generated: '+new Date().toLocaleString(),14,y);y+=7;doc.text('Daily Renal Score: '+score,14,y);y+=7;doc.text('Total Sodium: '+t.sodium+' mg',14,y);y+=7;doc.text('Total Potassium: '+t.potassium+' mg',14,y);y+=7;doc.text('Total Phosphorus: '+t.phosphorus+' mg',14,y);y+=10;if(note){doc.text('Clinic Note: '+note,14,y);y+=10}doc.setFontSize(13);doc.text('Today Log',14,y);y+=8;doc.setFontSize(10);if(!items.length)doc.text('No items added today.',14,y);else items.forEach(e=>{const line=`${e.title} | ${recommendationLabel(e.level)} | Sodium ${e.sodium} mg | Potassium ${e.potassium} mg | Phosphorus ${e.phosphorus} mg`;const split=doc.splitTextToSize(line,180);if(y>270){doc.addPage();y=16}doc.text(split,14,y);y+=split.length*5+2});doc.save('nephra_clinic_report.pdf')}
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js').catch(()=>{}))}const water = getTodayWaterTotal();
 const goal = 64;
+function updateDailyChart(totals){
+  updateBar('chartSodium', totals.sodium, 2000);
+  updateBar('chartPotassium', totals.potassium, 2000);
+  updateBar('chartPhosphorus', totals.phosphorus, 1000);
+}
 
+function updateBar(prefix, value, goal){
+  const pct = Math.min(100, Math.round((value / goal) * 100));
+
+  const text = document.getElementById(prefix + 'Text');
+  const bar = document.getElementById(prefix + 'Bar');
+
+  if(text) text.textContent = `${value} / ${goal} mg`;
+
+  if(bar){
+    bar.style.width = pct + '%';
+
+    if(pct < 50){
+      bar.style.background = '#4CAF50'; // green
+    } else if(pct < 80){
+      bar.style.background = '#FFC107'; // yellow
+    } else {
+      bar.style.background = '#F44336'; // red
+    }
+  }
+}
 const waterEl = document.getElementById('waterTotal');
 const waterBar = document.getElementById('waterBar');
 
